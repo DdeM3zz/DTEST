@@ -1,0 +1,226 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="ru">
+
+<head>
+	<title>Тест на Натурала</title>
+	<style>
+		body {
+			background: linear-gradient(135deg, #ff6f61, #6b48ff);
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			font-family: "Arial", sans-serif;
+			color: #ffffff;
+			min-height: 100vh;
+			margin: 0;
+		}
+		#gamebox {
+			width: 640px;
+			height: 480px;
+			border: 3px solid #ffd700;
+			border-radius: 15px;
+			margin-top: 20px;
+			position: relative;
+			text-align: center;
+			background-color: rgba(0, 0, 0, 0.7);
+			box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+		}
+		#question {
+			margin-top: 100px;
+			font-size: 22px;
+			color: #ffd700;
+			text-shadow: 1px 1px 2px #000;
+		}
+		#result {
+			margin-top: 100px;
+			font-size: 26px;
+			color: #00ffcc;
+			text-shadow: 1px 1px 2px #000;
+			display: none;
+		}
+		.button {
+			margin: 15px;
+			padding: 12px 25px;
+			font-size: 18px;
+			cursor: pointer;
+			border: none;
+			border-radius: 5px;
+			color: #ffffff;
+			transition: transform 0.1s;
+		}
+		.button:hover {
+			transform: scale(1.05);
+		}
+		.yes-button {
+			background-color: #28a745;
+		}
+		.no-button {
+			background-color: #dc3545;
+		}
+		#debug {
+			margin-top: 20px;
+			font-size: 16px;
+			color: #00ffcc;
+			text-shadow: 1px 1px 1px #000;
+		}
+		.bottom-credits {
+			margin-top: 20px;
+			font-size: 14px;
+			color: #ffd700;
+			text-align: center;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="gamebox">
+		<div id="question"></div>
+		<div id="result"></div>
+		<div id="buttons"></div>
+	</div>
+	<div id="debug">Тест начнётся...</div>
+
+	<script>
+		const gamebox = document.getElementById('gamebox');
+		const questionDiv = document.getElementById('question');
+		const resultDiv = document.getElementById('result');
+		const buttonsDiv = document.getElementById('buttons');
+		const debugText = document.getElementById('debug');
+
+		const questions = [
+			{
+				text: "Вы испытываете влечение к мужчинам?",
+				answers: { "Да": 0, "Нет": 10 }
+			},
+			{
+				text: "Вас зовут Дима?",
+				answers: { "Да": -100, "Нет": 10 }
+			},
+			{
+				text: "Вы любите пиво больше, чем коктейли?",
+				answers: { "Да": 10, "Нет": 5 }
+			},
+			{
+				text: "Вы ходите в спортзал минимум 3 раза в неделю?",
+				answers: { "Да": 10, "Нет": 5 }
+			},
+			{
+				text: "Вы предпочитаете фильмы с драками, а не мелодрамы?",
+				answers: { "Да": 10, "Нет": 5 }
+			},
+			{
+				text: "Вам нравится запах бензина?",
+				answers: { "Да": 10, "Нет": 5 }
+			},
+			{
+				text: "Вы знаете, как поменять колесо на машине?",
+				answers: { "Да": 10, "Нет": 5 }
+			},
+			{
+				text: "Вы любите шашлыки больше, чем веганскую еду?",
+				answers: { "Да": 10, "Нет": 5 }
+			},
+			{
+				text: "Ваша любимая музыка — рок или металл?",
+				answers: { "Да": 10, "Нет": 5 }
+			},
+			{
+				text: "Вы бы предпочли футбол романтической прогулке?",
+				answers: { "Да": 10, "Нет": 5 }
+			}
+		];
+
+		let currentQuestion = 0;
+		let score = 0;
+
+		function displayQuestion() {
+			if (currentQuestion >= questions.length) {
+				showResult();
+				return;
+			}
+			const question = questions[currentQuestion];
+			questionDiv.textContent = question.text;
+			buttonsDiv.innerHTML = '';
+			for (let answer in question.answers) {
+				const button = document.createElement('button');
+				button.textContent = answer;
+				button.className = `button ${answer === "Да" ? "yes-button" : "no-button"}`;
+				button.onclick = () => {
+					score += question.answers[answer];
+					if (answer === "Да" && question.text === "Вас зовут Дима?") {
+						showResult();
+						return;
+					}
+					currentQuestion++;
+					displayQuestion();
+				};
+				buttonsDiv.appendChild(button);
+			}
+			debugText.textContent = `Вопрос ${currentQuestion + 1} из ${questions.length}, очки: ${score}`;
+		}
+
+		function showResult() {
+			questionDiv.style.display = 'none';
+			buttonsDiv.style.display = 'none';
+			resultDiv.style.display = 'block';
+			if (score <= -90) {
+				resultDiv.textContent = `Тест окончен! Ваш результат: ${score} баллов. Похоже, вы Дима! :)`;
+			} else if (score < 40) {
+				resultDiv.textContent = `Тест окончен! Ваш результат: ${score} баллов. Вы не совсем натурал...`;
+			} else if (score < 80) {
+				resultDiv.textContent = `Тест окончен! Ваш результат: ${score} баллов. Возможно, вы натурал, но не уверены.`;
+			} else {
+				resultDiv.textContent = `Тест окончен! Ваш результат: ${score} баллов. Вы настоящий натурал! :)`;
+			}
+			debugText.textContent = `Итог: ${score} баллов`;
+		}
+
+		// Start the game
+		displayQuestion();
+	</script>
+
+	<div class="bottom-credits">
+		<p>Тест на Натурала v1.1, создан Grok 3 (xAI). Играйте с удовольствием!</p>
+	</div>
+</body>
+
+</html>
